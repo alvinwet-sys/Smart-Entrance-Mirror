@@ -1,0 +1,63 @@
+import asyncio
+import logging
+from aiohttp import web
+
+from core.config import load_cfg
+from core.bus import EventBus
+from core.router import Router
+from core.healthcheck import build_app as build_hc
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+
+async def main():
+    try:
+        # 加载配置
+        cfg = load_cfg()
+        logger.info("Configuration loaded")
+        
+        # 初始化事件总线
+        bus = EventBus()
+        logger.info("Event bus initialized")
+        
+        # 初始化路由器
+        router = Router(cfg, bus.publish)
+        
+        # 注册事件处理器
+        bus.subscribe("core.face_id_resolved", router.on_face)
+        bus.subscribe("voice.tts_done", router.on_tts_done)
+        bus.subscribe("voice.asr_text", router.on_asr_text)
+        bus.subscribe("llm.decision_ready", router.on_llm_decision)
+        logger.info("Event handlers registered")
+        
+        # 启动健康检查服务
+        app = await build_hc()
+        runner = web.AppRunner(app)
+        await runner.setup()
+        site = web.TCPSite(runner, host="127.0.0.1", port=cfg.app.http_port)
+        await site.start()
+        logger.info(f"Health check service started on port {cfg.app.http_port}")
+        
+        # 启动事件总线
+        bus_task = asyncio.create_task(bus.start())
+        logger.info("Event bus started")
+        
+        # 保持主循环运行
+        logger.info("[core] Smart Mirror System v1.0 started")
+        while True:
+            await asyncio.sleep(3600)
+            
+    except Exception as e:
+        logger.error(f"System startup failed: {e}")
+        raise
+
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        pass
