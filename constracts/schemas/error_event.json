@@ -1,0 +1,16 @@
+
+{
+  "$schema":"http://json-schema.org/draft-07/schema#",
+  "title":"ErrorEvent",
+  "type":"object",
+  "required":["ts","trace_id","source","error_code","message"],
+  "properties":{
+    "ts":{"type":"number"},
+    "trace_id":{"type":"string"},
+    "source":{"type":"string"},
+    "error_code":{"type":"string"},
+    "message":{"type":"string"},
+    "retry_after_ms":{"type":"integer","minimum":0}
+  },
+  "additionalProperties":false
+}

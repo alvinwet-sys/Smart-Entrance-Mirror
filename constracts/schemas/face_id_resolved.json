@@ -1,0 +1,17 @@
+{
+  "$schema":"http://json-schema.org/draft-07/schema#",
+  "title":"FaceIdResolved",
+  "type":"object",
+  "required":["ts","trace_id","source","track_id","bbox","identity","similarity"],
+  "properties":{
+    "ts":{"type":"number"},
+    "trace_id":{"type":"string"},
+    "source":{"type":"string","enum":["vision"]},
+    "track_id":{"type":"integer","minimum":0},
+    "bbox":{"type":"array","items":{"type":"number"},"minItems":4,"maxItems":4}, 
+    "identity":{"type":"string"},             
+    "similarity":{"type":"number","minimum":0,"maximum":1},
+    "quality":{"type":"number","minimum":0,"maximum":1}
+  }, 
+  "additionalProperties":false
+}

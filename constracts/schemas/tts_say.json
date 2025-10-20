@@ -1,0 +1,15 @@
+{
+  "$schema":"http://json-schema.org/draft-07/schema#",
+  "title":"TtsCommand",
+  "type":"object",
+  "required":["ts","trace_id","text","priority"],
+  "properties":{
+    "ts":{"type":"number"},
+    "trace_id":{"type":"string"},
+    "text":  {"type":"string","minLength":1,"maxLength":512},
+    "priority":{"type":"integer","minimum":0,"maximum":10}, 
+    "style":{"type":"string","enum":["default","news","cheerful","calm"],"default":"default"},
+    "interruptible":{"type":"boolean","default":true}
+  }, 
+  "additionalProperties":false
+}
