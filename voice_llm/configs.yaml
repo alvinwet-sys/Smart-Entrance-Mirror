@@ -1,0 +1,40 @@
+# LLM配置
+deepseek:
+  api_key: "sk-bdd73529195f4034961136f95e61e13d"
+  base_url: "https://api.deepseek.com/v1"
+  model: "deepseek-chat"
+  temperature: 0.7
+
+# 超时配置
+timeouts:
+  llm_ms: 8000
+  asr_ms: 8000
+  tts_stop_ms: 300
+
+# 重试配置
+retry:
+  llm:
+    max_attempts: 3
+    base_backoff_ms: 200
+
+# 熔断器配置
+circuit_breaker:
+  llm:
+    fail_threshold: 5
+    cool_seconds: 60
+
+# 优先级配置
+priorities:
+  alert: 10
+  llm: 7
+  wakeup: 5
+  greet: 2
+
+# 队列配置
+queues:
+  llm_max: 2
+  vision_max: 50
+
+# 冷却时间
+cooldowns:
+  greet_seconds: 300

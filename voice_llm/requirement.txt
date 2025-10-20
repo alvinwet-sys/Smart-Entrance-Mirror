@@ -1,0 +1,3 @@
+sk-bdd73529195f4034961136f95e61e13d apikey
+
+pip install aiohttp jsonschema pyyaml
