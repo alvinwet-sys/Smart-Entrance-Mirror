@@ -1,0 +1,13 @@
+MCP平台：
+1. 安装uv：
+pip install uv
+uv init mcp-server
+cd mcp-sercer
+uv add "mcp[cli]"
+pip install "mcp[cli]"
+将C:\```Users```\```your_name```\.local\bin 添加到环境变量
+2. API
+sk-bdd73529195f4034961136f95e61e13d apikey deepseek
+d77e2863faae221ab99eec3a42b72474 apikey weather
+f3ef16d43da6e2cf544821526172a420 apikey road condition
+pip install aiohttp jsonschema pyyaml
