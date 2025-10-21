@@ -42,6 +42,23 @@ class Router:
         # 这里可以处理一些TTS播放完成后的逻辑
         pass
         
+    async def on_wakeup(self, evt: dict):
+        """处理唤醒事件"""
+        keyword = evt.get('keyword', '')
+        confidence = evt.get('confidence', 0)
+        
+        if confidence >= self.cfg.thresholds.wakeup_confidence:
+            # 发送欢迎提示音
+            await self.publish("core.tts_say", {
+                "ts": evt['ts'],
+                "trace_id": evt['trace_id'],
+                "text": "我在听",
+                "priority": "high"
+            })
+            logger.info(f"唤醒成功：{keyword} (conf={confidence:.3f})")
+        else:
+            logger.debug(f"唤醒置信度不足：{keyword} (conf={confidence:.3f})")
+        
     async def on_asr_text(self, evt: dict):
         """处理语音识别文本"""
         text = evt.get('text', '').strip()

@@ -27,10 +27,16 @@ async def main():
         # 初始化路由器
         router = Router(cfg, bus.publish)
         
+        # 初始化唤醒检测器
+        from voice_llm import WakeupDetector
+        wakeup = WakeupDetector(cfg, bus.publish)
+        logger.info("Wakeup detector initialized")
+        
         # 注册事件处理器
         bus.subscribe("core.face_id_resolved", router.on_face)
         bus.subscribe("voice.tts_done", router.on_tts_done)
         bus.subscribe("voice.asr_text", router.on_asr_text)
+        bus.subscribe("voice.wakeup", router.on_wakeup)  
         bus.subscribe("llm.decision_ready", router.on_llm_decision)
         logger.info("Event handlers registered")
         
@@ -42,14 +48,23 @@ async def main():
         await site.start()
         logger.info(f"Health check service started on port {cfg.app.http_port}")
         
+        # 启动唤醒检测器
+        wakeup_task = asyncio.create_task(wakeup.start())
+        logger.info("Wakeup detector started")
+        
         # 启动事件总线
         bus_task = asyncio.create_task(bus.start())
         logger.info("Event bus started")
         
         # 保持主循环运行
         logger.info("[core] Smart Mirror System v1.0 started")
-        while True:
-            await asyncio.sleep(3600)
+        try:
+            while True:
+                await asyncio.sleep(3600)
+        except asyncio.CancelledError:
+            # 优雅关闭
+            await wakeup.stop()
+            logger.info("System shutdown completed")
             
     except Exception as e:
         logger.error(f"System startup failed: {e}")
