@@ -29,7 +29,7 @@ async def main():
         
         # 初始化唤醒检测器
         from voice_llm import wakeup_detector
-        wakeup = wakeup_detector(cfg, bus.publish)
+        wakeup = wakeup_detector.WakeupDetector(cfg, bus.publish)
         logger.info("Wakeup detector initialized")
         
         # 注册事件处理器
