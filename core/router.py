@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Callable, Awaitable, Any, Optional
 import logging
-from .config import Config
+from config import Config
 
 logger = logging.getLogger(__name__)
 

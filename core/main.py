@@ -2,10 +2,10 @@ import asyncio
 import logging
 from aiohttp import web
 
-from core.config import load_cfg
-from core.bus import EventBus
-from core.router import Router
-from core.healthcheck import build_app as build_hc
+from config import load_cfg
+from bus import EventBus
+from router import Router
+from healthcheck import build_app as build_hc
 
 logging.basicConfig(
     level=logging.INFO,
@@ -28,12 +28,12 @@ async def main():
         router = Router(cfg, bus.publish)
         
         # 初始化唤醒检测器
-        from voice_llm import WakeupDetector
-        wakeup = WakeupDetector(cfg, bus.publish)
+        from voice_llm import wakeup_detector
+        wakeup = wakeup_detector(cfg, bus.publish)
         logger.info("Wakeup detector initialized")
         
         # 注册事件处理器
-        bus.subscribe("core.face_id_resolved", router.on_face)
+        bus.subscribe("face_id_resolved", router.on_face)
         bus.subscribe("voice.tts_done", router.on_tts_done)
         bus.subscribe("voice.asr_text", router.on_asr_text)
         bus.subscribe("voice.wakeup", router.on_wakeup)  

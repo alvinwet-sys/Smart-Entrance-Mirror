@@ -1,0 +1,23 @@
+
+{
+  "$schema":"http://json-schema.org/draft-07/schema#",
+  "title":"DecisionRequest",
+  "type":"object",
+  "required":["ts","trace_id","query"],
+  "properties":{
+    "ts":{"type":"number"},
+    "trace_id":{"type":"string"},
+    "source":{"type":"string","enum":["core"],"default":"core"},
+    "query":{"type":"string","minLength":1,"maxLength":256},
+    "context":{ 
+      "type":"object",
+      "required":[],
+      "properties":{
+        "identity":{"type":"string"}, 
+        "last_asr":{"type":"string","minLength":1,"maxLength":256}
+      },
+      "additionalProperties":false
+    }
+  },
+  "additionalProperties":false
+}

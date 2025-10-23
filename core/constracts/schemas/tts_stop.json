@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TtsStop",
+  "type": "object",
+  "required": ["ts", "trace_id", "source", "reason"],
+  "properties": {
+    "ts":       { "type": "number" },
+    "trace_id": { "type": "string" },
+    "source":   { "type": "string", "enum": ["core"] },
+    "reason":   { "type": "string", "enum": ["preempt", "user", "error"] },
+    "timeout_ms": { "type": "integer", "minimum": 0, "default": 300 },   
+    "instance": { "type": "string" }                                      
+  },
+  "additionalProperties": false
+}
