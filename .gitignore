@@ -1,3 +1,5 @@
 .venv/
 AGENTS.md
 environment.yml
+err.log
+

@@ -1,5 +1,12 @@
+# Runtime deps for NVIDIA GPU installs (CUDA wheels are resolved by pip)
+# Ensure your pip resolves torch/torchaudio CUDA wheels that match your driver.
+torch
+torchaudio
+funasr
+modelscope
 numpy
+pyaudio
 webrtcvad
 soundfile
-onnxruntime
-sherpa-onnx
+# optional (for logs/cli tooling):
+# tqdm
