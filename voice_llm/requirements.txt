@@ -1,3 +1,4 @@
+# ASR and WAKEUP
 # Runtime deps for NVIDIA GPU installs (CUDA wheels are resolved by pip)
 # Ensure your pip resolves torch/torchaudio CUDA wheels that match your driver.
 torch
@@ -10,3 +11,11 @@ webrtcvad
 soundfile
 # optional (for logs/cli tooling):
 # tqdm
+# LLM
+requests>=2.28.0
+jsonschema>=4.0.0
+python-dotenv>=0.19.0
+pyyaml>=6.0
+# TTS
+baidu-aip
+playsound
