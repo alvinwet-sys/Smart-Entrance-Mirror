@@ -3,8 +3,8 @@ import json
 import logging
 from typing import Dict, Any, Optional
 from datetime import datetime
-from config import config
-from mcp_client import MCPClient
+from .config import config
+from .mcp_client import MCPClient
 
 logger = logging.getLogger(__name__)
 

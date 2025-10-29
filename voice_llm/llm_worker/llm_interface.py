@@ -5,6 +5,7 @@ LLM接口主程序
 支持日常对话、日期时间、天气、空气质量、新闻查询功能
 """
 
+
 import json
 import time
 import uuid
@@ -13,8 +14,8 @@ import re
 from typing import Dict, Any, Optional
 from jsonschema import validate, ValidationError
 
-from config import config
-from api_handlers import APIHandlers
+from .config import config
+from .api_handlers import APIHandlers
 
 # 配置日志
 logging.basicConfig(
@@ -39,7 +40,7 @@ class LLMInterface:
     def _load_schema(self, schema_file: str) -> Dict[str, Any]:
         """加载JSON Schema"""
         try:
-            schema_path = f"contracts/schemas/{schema_file}"
+            schema_path = f"./voice_llm/llm_worker/contracts/schemas/{schema_file}"
             with open(schema_path, 'r', encoding='utf-8') as f:
                 return json.load(f)
         except Exception as e:

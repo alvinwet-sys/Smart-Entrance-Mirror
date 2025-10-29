@@ -13,6 +13,7 @@ asr_service.py — Streaming ASR using FunASR Paraformer (zh-streaming)
 用法：
   pip install -U funasr modelscope pyaudio numpy soundfile webrtcvad
   python asr_service.py --model-dir /path/to/paraformer-zh-streaming  # 可选，不传则自动下载
+  python ./voice_llm/asr_service.py
 """
 
 from __future__ import annotations
@@ -117,13 +118,21 @@ class FunASRWrapper:
             self.model = AutoModel(model=model_dir, trust_remote_code=True, device=device)
         else:
             # 官方在线模型名（会自动下载到 ~/.cache/modelscope）
-            self.model = AutoModel(model="paraformer-zh-streaming", trust_remote_code=True, device=device)
+            self.model = AutoModel(model="paraformer-zh-streaming", disable_update=True, trust_remote_code=True, device=device)
         self.sr = CONFIG["sample_rate"]
         self.buffer = np.zeros(0, dtype=np.float32)
 
     def append_audio(self, chunk: np.ndarray) -> None:
         if chunk.dtype != np.float32:
             chunk = chunk.astype(np.float32)
+            
+        # 核心检查：判断当前采集的音频块是否全为0（没声音）
+        if np.all(chunk == 0):
+            tlog(f"[警告] 麦克风采集到空音频块！当前块长度：{len(chunk)} 采样点（检查麦克风是否正常）")
+        else:
+            # 打印音频块的最大值/最小值（非空则说明有有效声音）
+            tlog(f"[正常] 麦克风采集到有效音频：最大值={chunk.max():.4f}，最小值={chunk.min():.4f}")
+        
         self.buffer = np.concatenate([self.buffer, chunk])
         # 控制滚动缓冲长度，避免推理越来越慢
         max_len = int(CONFIG["max_buffer_sec"] * self.sr)
@@ -158,6 +167,8 @@ class FunASRWrapper:
                     os.remove(wav_path)
                 except Exception:
                     pass
+    
+    
 
     def recognize_partial(self) -> str:
         return self._infer_buffer()
