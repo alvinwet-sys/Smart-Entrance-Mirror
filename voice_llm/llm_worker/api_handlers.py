@@ -3,8 +3,38 @@ import json
 import logging
 from typing import Dict, Any, Optional
 from datetime import datetime
+<<<<<<< HEAD
+
+# 处理相对导入问题并尝试导入增强的MCP客户端
+try:
+    from .config import config
+    CONFIG_IMPORTED = True
+except ImportError:
+    # 处理直接运行时的导入
+    import sys
+    import os
+    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+    from config import config
+    CONFIG_IMPORTED = True
+
+# 尝试导入增强的MCP客户端，如果不存在则使用原始版本
+try:
+    if CONFIG_IMPORTED:
+        try:
+            from .enhanced_mcp_client import EnhancedMCPClient
+        except ImportError:
+            from enhanced_mcp_client import EnhancedMCPClient
+        MCP_CLIENT_AVAILABLE = True
+except ImportError:
+    try:
+        from .mcp_client import MCPClient
+    except ImportError:
+        from mcp_client import MCPClient
+    MCP_CLIENT_AVAILABLE = False
+=======
 from .config import config
 from .mcp_client import MCPClient
+>>>>>>> 89d5401b5ffdd6061d2c060ae4aaf582d9836220
 
 logger = logging.getLogger(__name__)
 
@@ -12,7 +42,14 @@ class APIHandlers:
     """API处理器"""
     
     def __init__(self):
-        self.mcp_client = MCPClient()
+        # 使用增强的MCP客户端（如果可用）
+        if MCP_CLIENT_AVAILABLE:
+            self.mcp_client = EnhancedMCPClient(config=config)
+            logger.info("✅ 使用增强的MCP客户端（支持自动降级）")
+        else:
+            self.mcp_client = MCPClient()
+            logger.info("📡 使用基础MCP客户端（直接API调用）")
+        
         self.deepseek_config = config.get('apis.deepseek')
     
     def call_deepseek_api(self, messages: list, temperature: float = 0.7) -> Dict[str, Any]:

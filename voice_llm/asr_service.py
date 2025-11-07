@@ -32,6 +32,7 @@ from typing import Optional, Iterator
 import numpy as np
 import soundfile as sf
 
+
 try:
     import pyaudio  # type: ignore
 except Exception as e:
@@ -39,6 +40,9 @@ except Exception as e:
     sys.exit(1)
 
 try:
+    import warnings
+    # 抑制 pkg_resources 弃用警告
+    warnings.filterwarnings("ignore", message=".*pkg_resources.*", category=UserWarning)
     import webrtcvad  # type: ignore
     _vad_available = True
 except Exception:
@@ -114,10 +118,20 @@ class FunASRWrapper:
      不做历史回溯纠错，以换取稳定低延迟。）
     """
     def __init__(self, model_dir: Optional[str], device: str):
-        if model_dir:
-            self.model = AutoModel(model=model_dir, trust_remote_code=True, device=device)
+        if model_dir and os.path.exists(model_dir):
+            # 使用本地模型，禁用远程更新检查
+            print(f"[ASR] 使用本地模型: {model_dir}")
+            self.model = AutoModel(model=model_dir, trust_remote_code=True, device=device, disable_update=True)
+        elif model_dir:
+            # 指定了模型路径但不存在，发出警告
+            print(f"[ASR] 警告：指定的模型路径不存在: {model_dir}，将使用在线模型")
+            self.model = AutoModel(model="paraformer-zh-streaming", disable_update=True, trust_remote_code=True, device=device)
         else:
             # 官方在线模型名（会自动下载到 ~/.cache/modelscope）
+<<<<<<< HEAD
+            print(f"[ASR] 使用在线模型: paraformer-zh-streaming")
+=======
+>>>>>>> 89d5401b5ffdd6061d2c060ae4aaf582d9836220
             self.model = AutoModel(model="paraformer-zh-streaming", disable_update=True, trust_remote_code=True, device=device)
         self.sr = CONFIG["sample_rate"]
         self.buffer = np.zeros(0, dtype=np.float32)

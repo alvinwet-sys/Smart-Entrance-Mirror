@@ -469,6 +469,15 @@ class RealTimeFaceRecognition:
     # 新增 pause 和 resume 方法
     def pause(self):
         """暂停视觉处理"""
+<<<<<<< HEAD
+        print(f"⏸️  视觉模块暂停请求 (当前状态: {'已暂停' if self.is_paused else '运行中'})")
+        self.is_paused = True
+
+    def resume(self):
+        """恢复视觉处理"""
+        print(f"▶️  视觉模块恢复请求 (当前状态: {'已暂停' if self.is_paused else '运行中'})")
+        self.is_paused = False
+=======
         if not self.is_paused:
             print("⏸️  视觉模块被外部暂停")
             self.is_paused = True
@@ -478,6 +487,7 @@ class RealTimeFaceRecognition:
         if self.is_paused:
             print("▶️  视觉模块被外部恢复")
             self.is_paused = False
+>>>>>>> 89d5401b5ffdd6061d2c060ae4aaf582d9836220
     
     def _processing_loop(self):
         """处理循环 - 在单独的线程中运行"""
@@ -490,6 +500,23 @@ class RealTimeFaceRecognition:
         
         while self.is_running:
             
+<<<<<<< HEAD
+            current_time = time.time()  # 移到最前面，确保在暂停检查中可用
+            
+            # 新增暂停检查逻辑
+            if self.is_paused:
+                # 暂停时减少日志输出频率
+                if hasattr(self, '_last_pause_log_time'):
+                    if current_time - self._last_pause_log_time > 2.0:  # 每2秒输出一次
+                        print(f"💤 视觉模块处于暂停状态...")
+                        self._last_pause_log_time = current_time
+                else:
+                    print(f"💤 视觉模块进入暂停状态...")
+                    self._last_pause_log_time = current_time
+                time.sleep(0.5)
+                continue
+            
+=======
             # 新增暂停检查逻辑
             if self.is_paused:
                 time.sleep(0.5)
@@ -497,6 +524,7 @@ class RealTimeFaceRecognition:
             
             current_time = time.time()
             
+>>>>>>> 89d5401b5ffdd6061d2c060ae4aaf582d9836220
             # 控制处理频率
             if current_time - last_process_time < frame_interval:
                 time.sleep(0.01)

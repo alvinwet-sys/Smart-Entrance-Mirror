@@ -3,6 +3,7 @@
 LLM接口主程序
 处理core.decision_request事件，生成llm.decision_ready回复
 支持日常对话、日期时间、天气、空气质量、新闻查询功能
+python ./voice_llm/llm_worker/llm_interface.py
 """
 
 
@@ -11,11 +12,26 @@ import time
 import uuid
 import logging
 import re
+import os
 from typing import Dict, Any, Optional
 from jsonschema import validate, ValidationError
 
+<<<<<<< HEAD
+# 处理相对导入问题
+try:
+    from .config import config
+    from .api_handlers import APIHandlers
+except ImportError:
+    # 如果相对导入失败，尝试绝对导入
+    import sys
+    import os
+    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+    from config import config
+    from api_handlers import APIHandlers
+=======
 from .config import config
 from .api_handlers import APIHandlers
+>>>>>>> 89d5401b5ffdd6061d2c060ae4aaf582d9836220
 
 # 配置日志
 logging.basicConfig(
@@ -40,12 +56,20 @@ class LLMInterface:
     def _load_schema(self, schema_file: str) -> Dict[str, Any]:
         """加载JSON Schema"""
         try:
+<<<<<<< HEAD
+            # 根据当前文件路径动态计算schema路径
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            schema_path = os.path.join(current_dir, 'contracts', 'schemas', schema_file)
+            
+=======
             schema_path = f"./voice_llm/llm_worker/contracts/schemas/{schema_file}"
+>>>>>>> 89d5401b5ffdd6061d2c060ae4aaf582d9836220
             with open(schema_path, 'r', encoding='utf-8') as f:
                 return json.load(f)
         except Exception as e:
-            logger.error(f"加载Schema失败: {str(e)}")
-            raise
+            logger.warning(f"加载Schema失败: {str(e)}, 使用空Schema")
+            # 如果Schema文件不存在，返回一个允许任何内容的空Schema
+            return {"type": "object"}
     
     def setup_event_handlers(self):
         """设置事件处理器（在实际项目中这里会连接到事件总线）"""
@@ -129,18 +153,19 @@ class LLMInterface:
         """检查是否需要调用API并执行调用"""
         query_lower = user_query.lower()
         
-        # 检查天气查询
+        # 🔥 重要：按优先级检查，避免误判
+        
+        # 1. 首先检查天气查询（优先级最高）
         if any(keyword in query_lower for keyword in ['天气', 'weather']):
             city = self._extract_city(user_query)
-            if city:
-                return {
-                    'need_api': True,
-                    'api_type': 'weather',
-                    'city': city,
-                    'result': self.api_handlers.handle_weather_query(city)
-                }
+            return {
+                'need_api': True,
+                'api_type': 'weather',
+                'city': city,
+                'result': self.api_handlers.handle_weather_query(city)
+            }
         
-        # 检查空气质量查询
+        # 2. 检查空气质量查询
         if any(keyword in query_lower for keyword in ['空气质量', '空气', 'pm2.5', 'aqi']):
             city = self._extract_city(user_query)
             return {
@@ -150,7 +175,7 @@ class LLMInterface:
                 'result': self.api_handlers.handle_air_quality_query(city)
             }
         
-        # 检查新闻查询
+        # 3. 检查新闻查询
         if any(keyword in query_lower for keyword in ['新闻', '头条', 'news']):
             news_type = self._extract_news_type(user_query)
             return {
@@ -160,8 +185,12 @@ class LLMInterface:
                 'result': self.api_handlers.handle_news_query(news_type)
             }
         
-        # 检查日期时间查询
-        if any(keyword in query_lower for keyword in ['时间', '日期', '几点', '今天', '现在']):
+        # 4. 检查日期时间查询（仅当不包含天气等其他关键词时）
+        time_keywords = ['时间', '日期', '几点', '现在']
+        if (any(keyword in query_lower for keyword in time_keywords) and
+            '天气' not in query_lower and  # 排除天气查询
+            '空气' not in query_lower and  # 排除空气质量查询
+            '新闻' not in query_lower):    # 排除新闻查询
             return {
                 'need_api': True,
                 'api_type': 'datetime',
@@ -172,22 +201,32 @@ class LLMInterface:
     
     def _extract_city(self, query: str) -> str:
         """从查询中提取城市名称"""
-        # 简单的城市提取逻辑，可以根据需要增强
+        # 改进的城市提取逻辑
+        
+        # 无效的"城市"词汇（时间词汇等）
+        invalid_cities = ['今天', '明天', '现在', '当前', '这里', '那里', '怎么样', '如何']
+        
         city_patterns = [
             r'(.+?)的天气',
-            r'查询(.+?)的天气',
-            r'(.+?)天气',
-            r'天气(.+?)'
+            r'查询(.+?)天气',
+            r'(.+?)天气怎么样',
+            r'(.+?)天气如何',
+            r'(.+?)市天气',
+            r'(.+?)省天气'
         ]
         
         for pattern in city_patterns:
             match = re.search(pattern, query)
             if match:
                 city = match.group(1).strip()
-                if city and len(city) < 10:  # 简单的城市名称验证
+                # 验证城市名称的有效性
+                if (city and 
+                    len(city) >= 2 and len(city) <= 8 and  # 合理的城市名长度
+                    city not in invalid_cities and  # 不是时间词汇
+                    not any(char.isdigit() for char in city)):  # 不包含数字
                     return city
         
-        # 如果没有明确城市，返回空字符串或默认城市
+        # 如果没有明确城市，返回默认城市
         return "北京"  # 默认城市
     
     def _extract_news_type(self, query: str) -> str:
