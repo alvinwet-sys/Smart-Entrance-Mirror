@@ -1,3 +1,49 @@
+<<<<<<< HEAD
+# 智能镜系统核心依赖
+
+TTS播报时长估计需要优化。
+
+# 深度学习和AI框架
+onnxruntime>=1.15.0              # ONNX模型推理引擎
+numpy>=1.24.0                    # 数值计算库
+opencv-python>=4.5.0             # 计算机视觉库
+
+# 语音处理
+pyaudio>=0.2.11                  # 音频采集和播放
+funasr>=1.0.0                    # 阿里达摩院语音识别
+modelscope>=1.9.0                # 模型下载管理
+soundfile>=0.12.0                # 音频文件处理
+sounddevice>=0.4.6               # 音频设备接口
+webrtcvad>=2.0.0                 # 语音活动检测
+librosa>=0.10.0                  # 音频分析库
+
+# 网络和通信
+aiohttp>=3.8.0                   # 异步HTTP客户端
+requests>=2.28.0                 # HTTP请求库
+
+# 数据处理和配置
+pyyaml>=6.0                      # YAML配置文件解析
+jsonschema>=4.17.0               # JSON schema验证
+python-json-logger>=2.0.0        # 结构化日志
+
+# 系统监控
+psutil>=5.9.0                    # 系统资源监控
+
+# 可选依赖 (用于GPU加速)
+# onnxruntime-gpu>=1.15.0        # GPU加速版本 (如有NVIDIA GPU)
+
+# 开发和调试工具 (可选)
+# pytest>=7.0.0                 # 单元测试框架
+# black>=22.0.0                 # 代码格式化
+# flake8>=4.0.0                 # 代码风格检查
+
+# 安装说明：
+# 1. Windows用户可能需要安装Microsoft Visual C++ 构建工具
+# 2. Linux用户可能需要安装: sudo apt-get install portaudio19-dev python3-pyaudio
+# 3. macOS用户可能需要安装: brew install portaudio
+# 4. 语音模型会在首次运行时自动下载到 ~/.cache/modelscope/
+# 5. 建议使用conda或venv创建虚拟环境
+=======
 aiohttp>=3.8.0
 pyyaml>=6.0
 psutil>=5.9.0
@@ -17,3 +63,4 @@ opencv-python
 onnxruntime
 pyzmq
 
+>>>>>>> 89d5401b5ffdd6061d2c060ae4aaf582d9836220

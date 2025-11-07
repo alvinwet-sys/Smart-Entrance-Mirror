@@ -8,7 +8,6 @@ import threading
 import queue
 import time
 import logging
-import uuid
 import sys
 import os
 
@@ -228,79 +227,43 @@ class StateMachineRouter:
 
 # ----------------- 其他模块适配 -----------------
 
-# 在 main.py 中，使用这个类替换 SimpleTTSWrapper
-# (请确保 voice_llm/tts_module.py 路径已添加到 sys.path)
-from voice_llm.tts_module import TTSModule # 导入您的模块
-
 class SimpleTTSWrapper:
-    """
-    集成了 TTSModule 的TTS模块包装器
-    """
+    """TTS包装器，增加中断功能"""
     def __init__(self, message_bus):
         self.message_bus = message_bus
-        self.tts_module = None
-
-    def _on_tts_event_callback(self, event_data):
-        """
-        当 TTSModule 完成播放或发生错误时，此函数被调用。
-        它将结果格式化并发送回路由器。
-        """
-        # 检查是否是播放完成的事件
-        if event_data.get("source") == "voice" and "ok" in event_data:
-            logger.info(f"🔊 TTS 回调: trace_id={event_data['trace_id']}, "
-                        f"stopped={event_data.get('stopped', False)}")
-            
-            # 格式化为路由器期望的回调消息
-            router_callback_msg = {
-                'status': 'finished',
-                'trace_id': event_data.get('trace_id')
-            }
-            self.message_bus.send('tts_callback_to_router', router_callback_msg)
-        
-        # 也可以在这里处理错误事件
-        elif "error_code" in event_data:
-             logger.error(f"❌ TTS 模块内部错误: {event_data['message']}")
+        # self.tts = None # 假设这是你的TTS实例
+        from voice_llm.tts_module import TTSModule
+        self.tts = TTSModule(event_callback=self._on_tts_event)
 
     def start_processing(self):
-        """
-        作为 TTS 线程的入口函数。
-        """
-        logger.info("🔊 正在初始化TTS模块...")
-        try:
-            # 初始化您的 TTSModule，并传入我们的回调函数
-            self.tts_module = TTSModule(event_callback=self._on_tts_event_callback)
-            logger.info("🔊 TTS模块初始化完成，监听播报任务...")
+        logger.info("🔊 TTS 模块启动...")
+        while self.message_bus.is_running:
+            msg = self.message_bus.receive('router_to_tts')
+            if msg is None: continue
 
-            while self.message_bus.is_running:
-                # 从路由器接收消息
-                msg = self.message_bus.receive('router_to_tts')
-                if msg is None:
-                    continue
+            msg_type = msg.get('type')
+            if msg_type == 'tts_say':
+                logger.info(f"TTS 准备播报: {msg.get('text')[:30]}...")
+                # 伪代码: 调用真实TTS播放
+                # self.tts.handle_tts_say(text=msg.get('text'), trace_id=msg.get('trace_id'))
+                # 模拟播放和回调
+                def simulate_playback(m):
+                    time.sleep(3) # 模拟播放耗时
+                    self.message_bus.send('tts_callback_to_router', {
+                        'status': 'finished',
+                        'trace_id': m.get('trace_id')
+                    })
+                threading.Thread(target=simulate_playback, args=(msg,)).start()
 
-                msg_type = msg.get('type')
-                if msg_type == 'tts_say':
-                    # 将我们的消息格式转换为 TTSModule 期望的 schema 格式
-                    tts_command = {
-                        "ts": time.time(),
-                        "trace_id": msg.get('trace_id', str(uuid.uuid4())),
-                        "text": msg.get('text', ''),
-                        "priority": msg.get('priority', 5),
-                        "interruptible": True
-                    }
-                    self.tts_module.handle_tts_say(tts_command)
-                
-                elif msg_type == 'tts_stop':
-                     # 创建一个符合 schema 的 stop 命令
-                    stop_command = {
-                        "ts": time.time(),
-                        "trace_id": msg.get('trace_id', 'stop_request'),
-                        "source": "core",
-                        "reason": "preempt"
-                    }
-                    self.tts_module.handle_tts_stop(stop_command)
+            elif msg_type == 'tts_stop':
+                logger.info("TTS 收到中断指令！")
+                # 伪代码: 调用真实TTS停止
+                # self.tts.stop()
 
-        except Exception as e:
-            logger.error(f"❌ TTS模块启动或运行失败: {e}", exc_info=True)
+            elif msg_type == 'play_sound':
+                logger.info(f"TTS 播放提示音: {msg.get('sound')}")
+                # 伪代码: 播放WAV文件
+                # self.tts.play(file=msg.get('sound'))
 
 class AudioSystem:
     """新的音频处理模块"""
@@ -330,137 +293,59 @@ class AudioSystem:
             # if wake_word_detected: ...
             time.sleep(1)
 
-# 在 main.py 中，使用这个类替换 SimpleVisionSystem
-# (请确保 vision/face_reco.py 路径已添加到 sys.path)
-from vision.face_reco import RealTimeFaceRecognition # 导入您的模块
-
 class SimpleVisionSystem:
-    """
-    集成了 RealTimeFaceRecognition 的视觉模块包装器
-    """
-    def __init__(self, message_bus, config):
-        self.message_bus = message_bus
-        self.config = config
-        self.recognizer = None
-
-    def _on_face_detected_callback(self, event_type, event_data):
-        """
-        当 RealTimeFaceRecognition 识别到人脸时，此函数被调用。
-        它将事件数据发送到消息总线。
-        """
-        # 我们只关心事件数据，将其发送到路由器
-        # event_data 已经是您期望的格式 {'keyword': ..., 'confidence': ...}
-        logger.info(f"👁️  视觉回调: 检测到 {event_data.get('keyword')}")
-        self.message_bus.send('vision_to_router', event_data)
-
-    def start_processing(self):
-        """
-        作为 Vision 线程的入口函数。
-        """
-        logger.info("👁️  正在初始化视觉模块...")
-        try:
-            self.recognizer = RealTimeFaceRecognition(
-                model_path=self.config.vision['model_path'],
-                gallery_dir=self.config.vision['gallery_dir']
-            )
-            # 设置回调函数，将识别结果连接到我们的消息总线
-            self.recognizer.set_direct_callback(self._on_face_detected_callback)
-            
-            logger.info("👁️  视觉模块初始化完成，启动处理循环...")
-            
-            # RealTimeFaceRecognition 内部管理着自己的处理线程和asyncio循环
-            # 我们需要在一个新的事件循环中启动它
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            
-            # 启动识别器（这将启动其内部的处理线程）
-            loop.run_until_complete(self.recognizer.start())
-            
-            # 让当前线程保持存活，以接收暂停/恢复指令
-            while self.message_bus.is_running:
-                time.sleep(1)
-
-        except Exception as e:
-            logger.error(f"❌ 视觉模块启动失败: {e}", exc_info=True)
-        finally:
-            if self.recognizer and self.recognizer.is_running:
-                # 确保在退出时停止
-                loop.run_until_complete(self.recognizer.stop())
-
-    def pause(self):
-        """外部接口，用于暂停视觉处理"""
-        if self.recognizer:
-            self.recognizer.pause()
-
-    def resume(self):
-        """外部接口，用于恢复视觉处理"""
-        if self.recognizer:
-            self.recognizer.resume()
-            
-
-# 在 main.py 的模块定义区域添加这个新类
-# 确保 llm_interface.py 所在的路径已添加到 sys.path
-from voice_llm.llm_worker.llm_interface import LLMInterface # 导入您的模块
-
-class SimpleLLMWrapper:
-    """
-    集成了 LLMInterface 的LLM模块包装器
-    """
+    """简化的视觉系统 - 支持暂停/恢复 (与您原版类似)"""
     def __init__(self, message_bus):
         self.message_bus = message_bus
-        self.llm_interface = None
+        self.is_paused = True # 初始时暂停
 
     def start_processing(self):
-        """
-        作为 LLM 线程的入口函数。
-        """
-        logger.info("🧠 正在初始化LLM模块...")
-        try:
-            # 初始化您的 LLMInterface 实例
-            self.llm_interface = LLMInterface()
-            logger.info("🧠 LLM模块初始化完成，等待决策请求...")
+        logger.info("👁️ 视觉模块启动...")
+        # 模拟人脸识别
+        def mock_recognition():
+            time.sleep(5)
+            if not self.is_paused:
+                logger.info("--- (模拟识别到人脸 'John') ---")
+                self.message_bus.send('vision_to_router', {
+                    'type': 'face_detected',
+                    'keyword': 'John',
+                    'confidence': 0.95
+                })
+        
+        while self.message_bus.is_running:
+            if not self.is_paused:
+                # 实际的人脸识别代码在这里循环
+                # 这里用一个延时和一次性任务模拟
+                threading.Thread(target=mock_recognition).start()
+                time.sleep(10) # 降低频率
+            else:
+                time.sleep(1) # 暂停时低功耗等待
 
-            while self.message_bus.is_running:
-                # 从路由器接收消息
-                msg = self.message_bus.receive('router_to_llm')
-                if msg is None:
-                    continue
+    def pause(self):
+        if not self.is_paused:
+            self.is_paused = True
+            logger.info("⏸️ 视觉系统已暂停")
 
-                if msg.get('type') == 'query':
-                    # 1. 将我们的内部消息格式转换为 LLMInterface 期望的事件格式
-                    decision_request_event = {
-                        "ts": time.time(),
-                        "trace_id": msg.get('trace_id', str(uuid.uuid4())),
-                        "source": "core",
-                        "query": msg.get('text', ''),
-                        "context": {
-                            "identity": msg.get('user', 'Unknown')
-                        }
-                    }
+    def resume(self):
+        if self.is_paused:
+            self.is_paused = False
+            logger.info("▶️ 视觉系统已恢复")
 
-                    # 2. 调用 LLM 核心处理方法
-                    result = self.llm_interface.handle_decision_request(decision_request_event)
-
-                    # 3. 将返回结果转换为我们的内部消息格式，并发送回路由器
-                    if 'reply_text' in result:
-                        response_msg = {
-                            'type': 'llm_response',
-                            'text': result['reply_text'],
-                            'trace_id': result.get('trace_id')
-                        }
-                        self.message_bus.send('llm_to_router', response_msg)
-                    elif 'error_code' in result:
-                        logger.error(f"❌ LLM处理错误: {result['error_code']} - {result['message']}")
-                        # 也可以将错误信息包装后发回路由器，让TTS播报错误
-                        error_response_msg = {
-                            'type': 'llm_response',
-                            'text': "抱歉，我好像遇到了一点麻烦。",
-                            'trace_id': result.get('trace_id')
-                        }
-                        self.message_bus.send('llm_to_router', error_response_msg)
-
-        except Exception as e:
-            logger.error(f"❌ LLM模块启动或运行失败: {e}", exc_info=True)
+# LLM 和 SystemController 可以类似地简化和适配
+class SimpleLLMWrapper:
+    def __init__(self, message_bus):
+        self.message_bus = message_bus
+    def start_processing(self):
+        logger.info("🧠 LLM 模块启动...")
+        while self.message_bus.is_running:
+            msg = self.message_bus.receive('router_to_llm')
+            if msg:
+                logger.info(f"LLM 正在处理: {msg.get('text')}")
+                time.sleep(2) # 模拟处理延迟
+                self.message_bus.send('llm_to_router', {
+                    'type': 'llm_response',
+                    'text': '今天天气晴朗，适合出门散步。'
+                })
 
 class SystemController:
     def __init__(self, message_bus, vision_system):
@@ -478,22 +363,13 @@ class SystemController:
 
 
 # ----------------- 主程序 -----------------
-class AppConfig:
-    vision = {
-        'model_path': r"C:/Users/17321/Desktop/core_run/core/model/w600k_r50.onnx",
-        'gallery_dir': r"C:/Users/17321/Desktop/core_run/core/vision/gallery_dataset"
-    }
-    # 未来可以添加 TTS, LLM 等配置
-    tts = {}
-
 class SmartMirrorApp:
     def __init__(self):
         self.message_bus = SimpleMessageBus()
         self.threads = []
-        self.config = AppConfig()
         
         # 初始化所有模块
-        self.vision = SimpleVisionSystem(self.message_bus,self.config)
+        self.vision = SimpleVisionSystem(self.message_bus)
         self.audio = AudioSystem(self.message_bus)
         self.router = StateMachineRouter(self.message_bus)
         self.tts = SimpleTTSWrapper(self.message_bus)
