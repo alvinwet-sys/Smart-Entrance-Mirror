@@ -1,9 +1,11 @@
-<<<<<<< HEAD
 # 🪞 Smart Entrance Mirror - 智能入口镜
 
 一个基于深度学习的智能镜系统，具备人脸识别、语音交互和AI助手功能。当用户走近镜子时，系统能够自动识别身份并提供个性化的语音交互服务。
 
 算法与控制逻辑详见开发文档
+
+## demo视频链接
+https://b23.tv/BDQ8geF
 
 ![License](https://img.shields.io/badge/License-MIT-blue.svg)
 ![Python](https://img.shields.io/badge/Python-3.8+-brightgreen.svg)
