@@ -106,11 +106,11 @@ class KeyboardWakeupListener:
         self.message_bus = message_bus
         self.config = config
         self.enabled = True
-        self.wakeup_keys = ['space', 'enter']  # 默认唤醒键
+        self.wakeup_keys = ['w']  # 默认唤醒键改为W键
         
         if config and hasattr(config, 'keyboard'):
             self.enabled = config.keyboard.get('enable_keyboard_wakeup', True)
-            self.wakeup_keys = config.keyboard.get('wakeup_keys', ['space', 'enter'])
+            self.wakeup_keys = config.keyboard.get('wakeup_keys', ['w'])
         
         logger.info(f"⌨️ 按键唤醒: {'启用' if self.enabled else '禁用'}, 唤醒键: {self.wakeup_keys}")
 
@@ -1139,7 +1139,7 @@ class AppConfig:
     # ⌨️ 即时唤醒配置 (适配未来的语音/手势唤醒)
     keyboard = {
         'enable_keyboard_wakeup': True,     # 启用按键唤醒 (临时方案)
-        'wakeup_keys': ['space', 'enter'],  # 唤醒按键 (空格/回车)
+        'wakeup_keys': ['w'],               # 唤醒按键 (W键)
         # TODO: 未来扩展
         # 'enable_voice_wakeup': False,     # 语音唤醒
         # 'enable_gesture_wakeup': False,   # 手势唤醒  
@@ -1202,9 +1202,9 @@ class SmartMirrorApp:
         logger.info("=" * 50)
         logger.info("📋 交互方式:")
         logger.info("   👁️ 人脸识别: 自动检测并问候已知用户")
-        logger.info("   ⚡ 即时唤醒: 按空格/回车键立即激活语音")
+        logger.info("   ⚡ 即时唤醒: 按W键立即激活语音")
         logger.info("   🗣️ 单次对话: 一次唤醒 -> 一次回复 -> 自动返回待机")
-        logger.info("   🚨 随时打断: 任何时候按键都能立即打断并重新开始")
+        logger.info("   🚨 随时打断: 任何时候按W键都能立即打断并重新开始")
         logger.info("")
         logger.info("🎯 设计理念:")
         logger.info("   ⚡ 最短延迟: 无需等待，即按即应")
