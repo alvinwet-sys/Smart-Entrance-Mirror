@@ -1,99 +1,94 @@
-# 🪞 Smart Entrance Mirror - 智能入口镜
+# Smart Entrance Mirror - 智能入口镜
 
-一个基于深度学习的智能镜系统，具备人脸识别、语音交互和AI助手功能。当用户走近镜子时，系统能够自动识别身份并提供个性化的语音交互服务。
+一个基于深度学习的智能镜系统，采用**按键唤醒模式**，具备人脸识别、语音交互和AI助手功能。系统支持W键即时唤醒语音交互，提供自然流畅的单轮对话体验。
 
-算法与控制逻辑详见开发文档
+> 详细的算法与控制逻辑请参见 [DEVELOPMENT.md](DEVELOPMENT.md) 开发文档
 
 ![License](https://img.shields.io/badge/License-MIT-blue.svg)
 ![Python](https://img.shields.io/badge/Python-3.8+-brightgreen.svg)
 ![Status](https://img.shields.io/badge/Status-Active%20Development-orange.svg)
+![Mode](https://img.shields.io/badge/Mode-Keyboard%20Wakeup-ff69b4.svg)
 
-## demo视频链接
-https://b23.tv/BDQ8geF
+## 演示视频
+**完整系统演示**: https://b23.tv/BDQ8geF  
+**demo所用设备**: Intel(R) Core(TM) Ultra 9 185H Intel64 Family 6 Model 170 Stepping 4 
 
-## 🌟 核心特性
+## 核心特性
 
-- **🔍 实时人脸识别**: 基于ONNX模型的高效人脸识别系统
-- **🎤 智能语音交互**: 集成FunASR语音识别和TTS语音合成
-- **🧠 AI助手对话**: 支持自然语言对话和智能回复
-- **⚡ 多线程架构**: 高性能的异步处理架构
-- **🎛️ 灵活配置**: 可调整的语音检测参数和系统配置
-- **📊 状态机管理**: 清晰的系统状态流转和控制
+- **按键唤醒**: W键即时唤醒，无需等待，随时可用
+- **智能人脸识别**: 基于Buffalo_M ONNX模型的高精度识别
+- **流畅语音交互**: FunASR + TTS，支持自然语音对话
+- **AI智能助手**: 集成大语言模型，智能理解与回复
+- **音频防污染**: TTS-ASR时序分离，避免系统提示音干扰
+- **状态机控制**: 5状态精确管理，确保交互流程清晰
+- **即时响应**: 优化的单轮对话模式，快速响应用户需求
 
-## 🏗️ 系统架构
+## 系统架构 (按键唤醒模式)
 
-### 核心组件
+### 主程序: core_asr_button.py
 
 ```
-智能镜系统
-├── 🎯 StateMachineRouter (状态机路由器)
-│   ├── IDLE (空闲等待)
-│   ├── GREETING (问候识别)
-│   ├── LISTENING (语音监听)
-│   ├── PROCESSING (处理请求)
-│   └── RESPONDING (回复播报)
-├── 👁️ Vision System (视觉系统)
-│   ├── 实时人脸检测
-│   ├── 人脸特征提取
-│   └── 身份识别匹配
-├── 🎤 Audio System (音频系统)
-│   ├── 语音活动检测(VAD)
-│   ├── 自动语音识别(ASR)
-│   └── 智能噪音过滤
-├── 🔊 TTS System (语音合成)
-│   ├── 文本转语音
-│   ├── 播放时长估算
-│   └── 音频播放控制
-└── 🧠 LLM System (大语言模型)
-    ├── 自然语言理解
-    ├── 智能对话生成
-    └── 上下文记忆
+SmartMirrorApp (按键唤醒版)
+├── KeyboardWakeupListener    # W键监听器
+├── StateMachineRouter        # 5状态流程控制
+│   ├── IDLE (空闲等待)       # 人脸识别 + 按键监听
+│   ├── GREETING (问候中)     # TTS播放"请说"
+│   ├── LISTENING (语音监听)  # ASR语音识别激活
+│   ├── PROCESSING (AI处理)   # LLM理解与生成
+│   └── RESPONDING (语音回复) # TTS播放回复
+├── SimpleVisionSystem        # 人脸识别模块
+├── AudioSystem               # FunASR语音识别
+├── SimpleTTSWrapper          # 百度TTS语音合成
+└── SimpleLLMWrapper          # OpenAI/本地大模型
 ```
 
-### 数据流图
+### 交互流程
 
 ```mermaid
-graph TB
-    A[摄像头] --> B[人脸检测]
-    B --> C[身份识别]
-    C --> D[状态机路由器]
+flowchart TD
+    A[IDLE空闲] --> B{触发方式}
+    B -->|人脸识别| C[GREETING问候]
+    B -->|W键按下| D[GREETING提示]
     
-    E[麦克风] --> F[语音检测VAD]
-    F --> G[语音识别ASR]
-    G --> D
+    C --> E[播放问候语]
+    D --> F[播放请说]
     
-    D --> H[LLM处理]
-    H --> I[TTS合成]
-    I --> J[音频播放]
+    E --> A
+    F --> G[LISTENING监听]
     
-    D --> K[视觉控制]
-    K --> B
+    G --> H[检测语音]
+    H --> I[PROCESSING处理]
+    I --> J[RESPONDING回复]
+    J --> A
+    
+    style A fill:#e1f5fe
+    style G fill:#f3e5f5
+    style I fill:#fff3e0
 ```
 
-## 🛠️ 技术栈
-
-### 深度学习框架
-- **ONNX Runtime**: 人脸识别模型推理
-- **FunASR**: 阿里达摩院语音识别模型
-- **Buffalo_M**: 高精度人脸识别模型
-
-### 核心依赖
-- **Python 3.8+**: 主要开发语言
-- **OpenCV**: 计算机视觉处理
-- **PyAudio**: 音频采集和播放
-- **asyncio**: 异步IO处理
-- **threading**: 多线程并发
+## 技术栈
 
 ### AI模型
-```python
-# 人脸识别模型
-model_path: "model/w600k_r50.onnx"  # Buffalo_M ONNX模型
+- **语音识别**: FunASR (阿里达摩院) - Paraformer大模型
+- **人脸识别**: Buffalo_M (InsightFace) - w600k_r50.onnx
+- **语音合成**: 百度TTS API
+- **大语言模型**: OpenAI GPT / 本地模型支持
 
-# 语音识别模型  
-model_dir: "speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-online"
-```
+### 核心技术
+- **Python 3.8+**: 主要开发语言
+- **ONNX Runtime**: AI模型推理引擎
+- **OpenCV**: 计算机视觉处理
+- **PyAudio**: 音频采集和播放
+- **pynput**: 全局按键监听
+- **Threading**: 多线程异步架构
 
-## 📋 系统要求
+### 架构设计
+- **消息总线**: 队列式模块通信
+- **状态机**: 5状态精确流程控制  
+- **防污染机制**: TTS-ASR时序分离
+- **即时响应**: 按键唤醒零延迟设计
+
+## 系统要求
 
 ### 硬件要求
 - **CPU**: Intel i5 或 AMD Ryzen 5 以上
@@ -107,7 +102,7 @@ model_dir: "speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-online"
 - **Python**: 3.8 或更高版本
 - **显卡**: 支持CUDA的NVIDIA显卡 (可选，用于加速)
 
-## 🚀 快速开始
+## 快速开始
 
 ### 1. 环境准备
 
@@ -132,231 +127,223 @@ source mirror_env/bin/activate  # Linux/Mac
 # 安装核心依赖
 pip install -r requirements.txt
 
-# 安装额外依赖 (如需要)
-pip install onnxruntime-gpu  # GPU加速版本
+# 安装语音模块依赖
+pip install -r voice_llm/requirements.txt
+
+# 安装视觉模块依赖
+pip install -r vision/requirements.txt
+
+# 可选: GPU加速支持
+pip install onnxruntime-gpu
 ```
 
-### 3. 模型下载
+### 3. 人脸数据库准备
 
 ```bash
-# 自动下载语音模型 (首次运行时)
-python core_asr_ts.py
-# 模型将下载到: ~/.cache/modelscope/hub/models/...
+# 创建个人人脸图库 (重要!)
+mkdir gallery_dataset/your_name
+# 将个人照片放入对应文件夹 (3-5张不同角度)
+copy your_photos/* gallery_dataset/your_name/
 
-# 手动下载人脸模型 (如果需要)
-wget https://github.com/deepinsight/insightface/releases/download/v0.7/buffalo_m.zip
-unzip buffalo_m.zip -d model/
+# 支持格式: .jpg, .jpeg, .png
+# 提示: 照片质量影响识别准确率
 ```
 
-### 4. 人脸数据库准备
+### 4. 启动系统
 
 ```bash
-# 创建人脸图库
-mkdir -p gallery_dataset/your_name
-# 将个人照片放入对应文件夹
-cp your_photos/* gallery_dataset/your_name/
+# 启动按键唤醒模式
+python core_asr_button.py
 
-# 支持的图片格式: .jpg, .jpeg, .png
-# 建议每人 3-5 张不同角度的照片
+# 系统启动后看到以下提示即表示成功:
+# 所有模块线程已启动
+# 按键唤醒监听器已启动，监听按键: ['w']
+# 视觉模块已标记为 Ready
 ```
 
-### 5. 运行系统
+### 5. 使用方法
 
 ```bash
-# 启动智能镜系统
-python core_asr_ts.py
+# 基本操作
+1. 走近镜子 -> 自动人脸识别并问候
+2. 按W键 -> 听到"请说"后开始说话  
+3. 说出问题 -> AI理解并语音回复
+4. 继续按W键可开始新对话
 
-# 查看详细日志
-python core_asr_ts.py --verbose
-
-# 使用自定义配置
-python core_asr_ts.py --config custom_config.py
+# 高级操作  
+Ctrl+C  # 退出系统
 ```
 
-## ⚙️ 配置说明
+## 配置说明
 
-### 主要配置文件
+### 核心配置 (core_asr_button.py)
+
 ```python
-# core_asr_ts.py 中的 AppConfig 类
 class AppConfig:
-    # 视觉配置
+    # ASR语音识别配置 (关键参数)
+    asr = {
+        'amplitude_threshold': 0.025,     # 语音敏感度 (降低=更敏感)
+        'confidence_required': 2,         # 连续检测次数要求  
+        'endpoint_silence_ms': 1200,      # 语音结束等待时间(ms)
+    }
+    
+    # 按键唤醒配置
+    keyboard = {
+        'enable_keyboard_wakeup': True,   # 启用按键唤醒
+        'wakeup_keys': ['w'],             # 唤醒按键 (默认W键)
+    }
+    
+    # 视觉识别配置  
     vision = {
         'model_path': "model/w600k_r50.onnx",
         'gallery_dir': "gallery_dataset"
     }
-    
-    # ASR语音配置
-    asr = {
-        'model_dir': "path/to/asr/model",
-        'amplitude_threshold': 0.03,      # 语音检测敏感度
-        'confidence_required': 1,         # 连续检测次数
-        'endpoint_silence_ms': 1500,      # 语音结束静音时长
-        'debug_audio_threshold': 0.005,   # 调试日志阈值
-    }
 ```
 
-### 语音检测参数调优
+### 参数调优建议
 
-```python
-# 敏感模式 (安静环境)
-asr_config = {
-    'amplitude_threshold': 0.02,    # 更敏感
-    'confidence_required': 1,       # 快速响应
-    'endpoint_silence_ms': 1000,    # 更短等待
-}
+| 环境类型 | amplitude_threshold | confidence_required | endpoint_silence_ms | 说明 |
+|---------|-------------------|-------------------|-------------------|------|
+| 安静环境 | 0.02 | 1-2 | 1000ms | 快速响应，高敏感度 |
+| 办公室 | 0.025 | 2-3 | 1200ms | 平衡模式 (推荐) |
+| 嘈杂环境 | 0.05 | 3-4 | 2000ms | 抗干扰，稳定优先 |
 
-# 保守模式 (嘈杂环境)  
-asr_config = {
-    'amplitude_threshold': 0.05,    # 较不敏感
-    'confidence_required': 3,       # 更稳定
-    'endpoint_silence_ms': 2000,    # 更长等待
-}
+## 使用说明
+
+### 交互模式
+
+**即时唤醒模式** (主要使用方式)
+```
+1. 按W键 → 听到"请说" → 说出问题 → AI回复 → 返回待机
 ```
 
-### 使用参数调整工具
-
-```bash
-# 运行ASR参数调整工具
-python asr_tuning_tool.py
-
-# 生成配置模板
-python asr_tuning_tool.py --generate-config
+**自动问候模式** (辅助功能)  
+```
+1. 走近镜子 → 人脸识别 → 问候语播放 → 返回待机
 ```
 
-## 🎯 使用流程
+### 核心特点
 
-### 典型用户交互流程
-
-1. **👤 用户接近**: 摄像头检测到人脸
-2. **🔍 身份识别**: 系统识别用户身份
-3. **👋 个性化问候**: "你好，张三！今天看起来不错。有什么可以帮您的吗？"
-4. **🎤 语音等待**: 系统进入听音模式，等待用户语音指令
-5. **🗣️ 用户说话**: "今天天气怎么样？"
-6. **🧠 AI处理**: LLM理解并生成回复
-7. **🔊 语音回复**: "今天晴天，温度25度，适合出行。"
-8. **🔄 继续对话**: 可继续多轮对话
-9. **⏰ 自动结束**: 无操作后自动返回待机状态
+- **即时打断**: 任何时候按W键都能立即开始新对话
+- **单轮对话**: 一问一答模式，避免复杂状态管理  
+- **音频隔离**: TTS播放期间ASR自动关闭，避免干扰
+- **智能超时**: 无操作自动返回待机状态
 
 ### 系统状态说明
 
 | 状态 | 说明 | 视觉模块 | 音频模块 | 超时时间 |
 |------|------|----------|----------|----------|
-| IDLE | 空闲等待 | ✅ 激活 | ❌ 关闭 | 无限制 |
-| GREETING | 问候中 | ❌ 暂停 | ❌ 关闭 | 动态计算 |
-| LISTENING | 听音中 | ❌ 暂停 | ✅ 激活 | 25秒 |
-| PROCESSING | 处理中 | ❌ 暂停 | ❌ 关闭 | 30秒 |
-| RESPONDING | 回复中 | ❌ 暂停 | ❌ 关闭 | 动态计算 |
+| IDLE | 空闲等待 | 激活 | 关闭 | 无限制 |
+| GREETING | 问候中 | 暂停 | 关闭 | 动态计算 |
+| LISTENING | 听音中 | 暂停 | 激活 | 25秒 |
+| PROCESSING | 处理中 | 暂停 | 关闭 | 30秒 |
+| RESPONDING | 回复中 | 暂停 | 关闭 | 动态计算 |
 
-## 🔧 开发指南
+## 开发指南
 
 ### 项目结构
 
 ```
 Smart-Entrance-Mirror-SELF/
-├── 📄 core_asr_ts.py           # 主程序入口
-├── 📄 requirements.txt         # Python依赖
-├── 📁 voice_llm/              # 语音和LLM模块
+├── core_asr_button.py       # 主程序入口 (按键唤醒版)
+├── requirements.txt         # Python依赖
+├── voice_llm/              # 语音和LLM模块
 │   ├── asr_service.py         # 语音识别服务
 │   ├── tts_module.py          # 语音合成模块
 │   └── llm_worker/            # LLM工作模块
-├── 📁 vision/                 # 视觉处理模块
+├── vision/                 # 视觉处理模块
 │   ├── face_reco.py           # 人脸识别核心
 │   └── camera_and_recognition.py
-├── 📁 model/                  # AI模型文件
+├── model/                  # AI模型文件
 │   └── w600k_r50.onnx         # 人脸识别模型
-├── 📁 gallery_dataset/        # 人脸图库
+├── gallery_dataset/        # 人脸图库
 │   ├── person1/               # 个人图片文件夹
 │   ├── person2/
 │   └── ...
-└── 📁 tools/                  # 开发工具
+└── tools/                  # 开发工具
     ├── asr_tuning_tool.py     # ASR参数调优
     └── test_timing_fix.py     # 时序测试
 ```
 
-### 关键类说明
+## 系统状态监控
 
-#### StateMachineRouter
-- **作用**: 系统核心状态机，管理所有模块协调
-- **主要方法**:
-  - `handle_vision_message()`: 处理人脸识别消息
-  - `handle_audio_message()`: 处理语音输入消息
-  - `handle_tts_callback()`: 处理TTS完成回调
-  - `reset_to_idle()`: 重置系统到空闲状态
+### 状态转换表
 
-#### AudioSystem  
-- **作用**: 语音采集和识别处理
-- **核心算法**: VAD + 幅度检测 + 连续性验证
-- **主要参数**: 
-  - `amplitude_threshold`: 音频信号强度阈值
-  - `confidence_required`: 连续检测次数要求
+| 当前状态 | 触发事件 | 目标状态 | 说明 |
+|---------|----------|----------|------|
+| IDLE | 人脸识别成功 | GREETING | 播放个性化问候 |
+| IDLE | W键按下 | GREETING | 播放"请说"提示 |
+| GREETING | 问候播放完毕 | IDLE | 返回待机状态 |
+| GREETING | "请说"播放完毕 | LISTENING | 启动语音识别 |
+| LISTENING | 检测到语音 | PROCESSING | 发送给LLM处理 |
+| PROCESSING | LLM返回结果 | RESPONDING | 播放AI回复 |
+| RESPONDING | 回复播放完毕 | IDLE | 对话结束 |
 
-#### SimpleVisionSystem
-- **作用**: 人脸检测和识别
-- **核心算法**: ONNX模型推理 + 特征匹配
-- **主要方法**:
-  - `pause()`: 暂停人脸检测
-  - `resume()`: 恢复人脸检测
+### 运行状态检查
 
-### 添加新功能
-
-#### 添加新的语音命令(规则库匹配)
-
-```python
-# 在 handle_audio_message 中添加命令识别
-def handle_audio_message(self, msg):
-    if msg_type == 'user_command':
-        text = msg.get('text', '').strip()
-        
-        # 添加特定命令处理
-        if '播放音乐' in text:
-            self.handle_music_command(text)
-        elif '设置提醒' in text:
-            self.handle_reminder_command(text)
-```
-
-#### 扩展人脸识别功能
-
-```python
-# 在 handle_vision_message 中添加新逻辑
-def handle_vision_message(self, msg):
-    identity = msg.get('keyword')
-    
-    # 添加访客处理
-    if identity == "stranger":
-        self.handle_visitor_detection(msg)
-    
-    # 添加表情识别
-    emotion = msg.get('emotion', 'neutral')
-    self.handle_emotion_response(identity, emotion)
-```
-
-## 🐛 故障排除
-
-### 常见问题
-
-#### 1. 人脸识别不准确
 ```bash
+# 系统启动成功标志
+所有模块线程已启动
+按键唤醒监听器已启动，监听按键: ['w']  
+视觉模块已标记为 Ready
+音频模块启动 (仅LISTENING状态ASR模式)
+TTS模块初始化完成，监听播报任务...
+
+# 正常工作日志示例
+检测到W键按下
+状态转换: IDLE -> GREETING  
+播放TTS: 请说
+状态转换: GREETING -> LISTENING
+用户语音: '今天天气怎么样'
+LLM 回复: '今天是晴天，温度25度...'
+```
+## 故障排除指南
+
+### 常见问题快速诊断
+
+| 问题现象 | 可能原因 | 解决方案 | 优先级 |
+|---------|----------|----------|-------|
+| W键无响应 | 程序未获得键盘焦点 | 点击程序窗口或以管理员运行 | 高 |
+| ASR识别不准 | 麦克风权限/环境噪音 | 检查权限，调整敏感度参数 | 中 |
+| 人脸识别失败 | 光照不足/摄像头问题 | 改善光照，检查摄像头状态 | 中 |
+| AI无回复 | API配置/网络问题 | 检查LLM API配置和网络 | 中 |
+| TTS无声音 | 音频设备/权限问题 | 检查音频设备和系统权限 | 中 |
+
+### 诊断命令
+
+```bash
+# 一键检测系统状态
+python -c "
+import cv2, pyaudio, sys
 # 检查摄像头
-python -c "import cv2; cap=cv2.VideoCapture(0); print('Camera OK' if cap.read()[0] else 'Camera Error')"
+cap = cv2.VideoCapture(0)
+cam_ok = cap.read()[0]
+cap.release()
+# 检查音频
+pa = pyaudio.PyAudio()
+audio_devices = pa.get_device_count()
+pa.terminate()
+# 输出结果
+print(f'摄像头: {'正常' if cam_ok else '异常'}')
+print(f'音频设备: {audio_devices} 个设备')
+print(f'Python: {sys.version.split()[0]}')
+"
 
-# 检查光照条件
-# 确保光线充足，避免逆光
-
-# 重新训练人脸库
-rm -rf gallery_dataset/.cache
-python core_asr_ts.py  # 重新初始化
+# 查看详细运行日志  
+python core_asr_button.py > system.log 2>&1 &
+tail -f system.log | grep -E "检测到|语音|视觉|播放|错误"
 ```
 
-#### 2. 语音识别失效
+### 快速修复
+
 ```bash
-# 检查麦克风
-python -c "import pyaudio; p=pyaudio.PyAudio(); print('Microphone devices:'); [print(f'{i}: {p.get_device_info_by_index(i)}') for i in range(p.get_device_count())]"
+# 重启相关服务 (Windows)
+taskkill /f /im python.exe  # 强制关闭Python进程
+python core_asr_button.py   # 重新启动
 
-# 调整语音敏感度
-python asr_tuning_tool.py  # 使用调优工具
-
-# 检查环境噪音
-# 建议在安静环境下使用
+# 清理缓存数据
+del /q gallery_dataset\.cache\*  # 清理人脸缓存
+rmdir /s gallery_dataset\.cache  # 删除缓存目录
 ```
 
 #### 3. 系统卡顿或崩溃
@@ -383,80 +370,125 @@ python -c "from voice_llm.tts_module import TTSModule; print('TTS Module OK')"
 
 ```bash
 # 查看详细日志
-python core_asr_ts.py 2>&1 | tee system.log
+python core_asr_button.py 2>&1 | tee system.log
 
 # 过滤特定组件日志
-grep "🎤" system.log  # 音频相关
-grep "👁️" system.log  # 视觉相关  
-grep "🔊" system.log  # TTS相关
-grep "🧠" system.log  # LLM相关
+grep "音频" system.log  # 音频相关
+grep "视觉" system.log  # 视觉相关  
+grep "TTS" system.log  # TTS相关
+grep "LLM" system.log  # LLM相关
 ```
 
-## 🔒 约束条件和注意事项
+## 开发与扩展
+
+### 项目结构 (按键唤醒版)
+
+```
+core_asr_button.py          # 主程序 - 按键唤醒专用版
+├── SmartMirrorApp            # 应用主类
+├── StateMachineRouter        # 5状态流程控制  
+├── KeyboardWakeupListener    # W键监听器
+├── AudioSystem              # FunASR语音识别
+├── SimpleVisionSystem       # 人脸识别 
+├── SimpleTTSWrapper         # TTS语音合成
+└── SimpleLLMWrapper         # 大模型接口
+
+相关模块文件
+├── voice_llm/               # 语音AI模块
+├── vision/                  # 视觉处理模块  
+├── gallery_dataset/         # 人脸数据库
+└── tools/                   # 开发工具
+```
+
+### 扩展功能建议
+
+- **语音唤醒**: 替代按键触发，支持"小助手"等唤醒词
+- **手势识别**: 挥手或特定手势触发交互
+- **表情分析**: 根据用户情绪调整回复风格
+- **智能家居**: 集成IoT设备控制功能
+- **多用户模式**: 支持家庭成员个性化配置
+
+##  使用约束与安全
 
 ### 隐私保护
-- **本地处理**: 人脸数据仅在本地存储和处理
-- **数据安全**: 不上传个人生物特征数据
-- **访问控制**: 建议设置访问权限和使用场景限制
+- **本地优先**: 人脸特征数据仅本地存储处理
+- **数据不外传**: 不上传个人生物特征到云端
+- **访问控制**: 建议配置设备使用权限管理
 
 ### 使用限制
-- **环境光照**: 需要适当的光照条件进行人脸识别
-- **网络连接**: LLM服务可能需要网络连接
-- **计算资源**: 实时处理需要足够的CPU/GPU资源
-- **音频环境**: 建议在相对安静的环境下使用
+- **环境要求**: 充足光照条件 (避免逆光/暗光)
+- **网络依赖**: LLM服务需要稳定网络连接
+- **性能要求**: 推荐8GB+内存，i5+CPU
+- **音频环境**: 相对安静环境获得最佳体验
 
-### 法律合规
-- **用户同意**: 使用前需获得用户明确同意
-- **数据留存**: 遵循当地数据保护法规
-- **使用场景**: 仅限于授权场景下使用
+### 合规使用
+- **用户授权**: 获得明确使用同意后部署
+- **📝 数据管理**: 遵循当地个人数据保护法规  
+- **🎯 场景限制**: 仅在授权的私人/办公场景使用
 
-## 🤝 贡献指南
+## 🤝 社区贡献
 
-我们欢迎所有形式的贡献！
+### 💡 贡献方式
+- **🐛 问题报告**: [GitHub Issues](https://github.com/alvinwet-sys/Smart-Entrance-Mirror/issues)
+- **✨ 功能建议**: [Discussions](https://github.com/alvinwet-sys/Smart-Entrance-Mirror/discussions)  
+- **📝 代码贡献**: Fork → 开发 → Pull Request
+- **📚 文档完善**: 改进使用说明和开发文档
 
-### 贡献类型
-- 🐛 Bug 修复
-- ✨ 新功能开发  
-- 📚 文档改进
-- 🎨 UI/UX 优化
-- ⚡ 性能优化
+### 🛠️ 开发规范
+```bash
+# 开发环境搭建
+git clone https://github.com/alvinwet-sys/Smart-Entrance-Mirror.git
+cd Smart-Entrance-Mirror
+git checkout -b feature/your-feature-name
 
-### 开发流程
-1. Fork 项目到个人仓库
-2. 创建功能分支: `git checkout -b feature/new-feature`
-3. 提交更改: `git commit -m 'Add new feature'`
-4. 推送分支: `git push origin feature/new-feature`
-5. 创建 Pull Request
+# 代码规范检查
+flake8 core_asr_button.py
+black core_asr_button.py --check
 
-### 代码规范
-- 遵循 PEP 8 Python 代码规范
-- 添加必要的注释和文档字符串
-- 编写单元测试覆盖新功能
-- 确保向后兼容性
+# 提交规范
+git commit -m "feat: 添加新的语音唤醒功能"
+git commit -m "fix: 修复ASR音频污染问题"  
+git commit -m "docs: 更新用户使用指南"
+```
 
-## 📄 许可证
+---
 
-本项目采用 MIT 许可证。详见 [LICENSE](LICENSE) 文件。
+## 许可协议
 
-## 🙏 致谢
+本项目采用 **MIT 许可证**，允许自由使用、修改和分发。详见 [LICENSE](LICENSE) 文件。
 
-- [InsightFace](https://github.com/deepinsight/insightface) - 人脸识别模型
-- [FunASR](https://github.com/alibaba-damo-academy/FunASR) - 语音识别框架
-- [OpenCV](https://opencv.org/) - 计算机视觉库
-- 所有贡献者和社区成员
+## 致谢
 
-## 📞 联系方式
+感谢以下开源项目和贡献者:
 
-- **项目主页**: [GitHub Repository](https://github.com/your-username/Smart-Entrance-Mirror-SELF)
-- **问题报告**: [GitHub Issues](https://github.com/your-username/Smart-Entrance-Mirror-SELF/issues)
-- **功能请求**: [GitHub Discussions](https://github.com/your-username/Smart-Entrance-Mirror-SELF/discussions)
+| 项目 | 作用 | 链接 |
+|-----|------|------|
+| **InsightFace** | 高精度人脸识别模型 | [GitHub](https://github.com/deepinsight/insightface) |
+| **FunASR** | 阿里达摩院语音识别 | [GitHub](https://github.com/alibaba-damo-academy/FunASR) |
+| **OpenCV** | 计算机视觉基础库 | [官网](https://opencv.org/) |
+| **pynput** | 跨平台输入控制 | [PyPI](https://pypi.org/project/pynput/) |
+
+
+## 联系与支持
+
+| 类型 | 渠道 | 说明 |
+|------|------|------|
+| **项目主页** | [GitHub Repository](https://github.com/alvinwet-sys/Smart-Entrance-Mirror) | 源码、发布版本 |
+| **问题报告** | [GitHub Issues](https://github.com/alvinwet-sys/Smart-Entrance-Mirror/issues) | Bug报告、功能建议 |
+| **技术讨论** | [GitHub Discussions](https://github.com/alvinwet-sys/Smart-Entrance-Mirror/discussions) | 使用交流、开发讨论 |
+| **演示视频** | [哔哩哔哩](https://b23.tv/BDQ8geF) | 系统功能演示 |
 
 ---
 
 <div align="center">
 
-**⭐ 如果这个项目对您有帮助，请给我们一个星标！**
+**如果这个项目对您有帮助，请给我们一个 Star！**
 
-Made with ❤️ by Smart Mirror Team
+![GitHub stars](https://img.shields.io/github/stars/alvinwet-sys/Smart-Entrance-Mirror?style=social)
+![GitHub forks](https://img.shields.io/github/forks/alvinwet-sys/Smart-Entrance-Mirror?style=social)
+
+**Made with by Smart Mirror Team**
+
+*专注于按键唤醒模式的智能交互体验 | v2.0*
 
 </div>

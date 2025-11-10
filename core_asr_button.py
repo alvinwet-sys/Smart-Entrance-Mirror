@@ -342,13 +342,13 @@ class StateMachineRouter:
                 self.vision_system.pause()
                 logger.info("🎛️ 视觉模块已暂停")
             
-            # 🔥 重要：立即切换状态，避免接收到延迟的TTS回调
-            self.set_state(SystemState.LISTENING)
+            # � 修复：先设置为过渡状态，避免立即启动ASR
+            self.set_state(SystemState.GREETING)  # 临时使用GREETING状态，等待"请说"播放完毕
             
             # 🎯 延迟发送"请说"，确保TTS停止命令先执行
             def send_delayed_feedback():
-                # 再次检查状态，确保仍在LISTENING（防止状态被其他事件改变）
-                if self.state == SystemState.LISTENING:
+                # 再次检查状态，确保仍在正确状态
+                if self.state == SystemState.GREETING:
                     feedback_text = "请说"
                     self.message_bus.send('router_to_tts', {
                         'type': 'tts_say',
@@ -356,6 +356,7 @@ class StateMachineRouter:
                         'trace_id': 'instant_wakeup_feedback'
                     })
                     logger.info("🎤 已发送唤醒反馈: 请说")
+                    logger.info("🎤 等待'请说'播放完毕后启动ASR检测...")
                 else:
                     logger.info(f"🎤 跳过唤醒反馈 - 状态已变为: {self.state}")
             
@@ -432,10 +433,19 @@ class StateMachineRouter:
             self.reset_to_idle()
             return
         
-        # 2. 即时唤醒反馈播放完毕 -> 保持聆听状态，等待用户命令  
-        elif self.state == SystemState.LISTENING and trace_id in ['keyboard_wakeup_feedback', 'instant_wakeup_feedback']:
-            logger.info("⚡ 唤醒反馈完成，等待语音输入...")
-            # 保持LISTENING状态，等待用户语音输入
+        # 2. 即时唤醒反馈播放完毕 -> 切换到LISTENING状态，启动ASR检测
+        elif self.state == SystemState.GREETING and trace_id in ['keyboard_wakeup_feedback', 'instant_wakeup_feedback']:
+            logger.info("⚡ 唤醒反馈播放完成，现在切换到LISTENING状态")
+            
+            # 🔥 关键修复：在切换状态前，通知音频系统清空ASR缓冲区
+            self.message_bus.send('router_to_audio', {
+                'type': 'clear_asr_buffer',
+                'reason': 'tts_feedback_completed'
+            })
+            
+            self.set_state(SystemState.LISTENING)
+            logger.info("🎤 ✅ '请说'播放完毕，ASR检测已启动，可以开始说话...")
+            # 切换到LISTENING状态，ASR模块会自动检测到状态变化并启动音频流
             return
 
         # 3. LLM回答播放完毕 -> 立即返回空闲状态（单次对话模式）
@@ -465,7 +475,6 @@ class StateMachineRouter:
         # 基础播放时长 + 标点停顿 + 适度缓冲时间
         duration = len(text) / chars_per_second + punctuation_delay + 1.5
         
-        # 🔥 重要修复：移除15秒硬限制，支持长文本！
         # 设置合理的最小值和最大值限制
         estimated = max(2.0, min(duration, 120.0))  # 最长支持2分钟
         
@@ -806,24 +815,54 @@ class AudioSystem:
             try:
                 current_state = self.router.state
                 
+                # 🔥 检查是否有ASR缓冲区清空请求
+                clear_msg = self.message_bus.receive('router_to_audio', timeout=0.01)
+                if clear_msg and clear_msg.get('type') == 'clear_asr_buffer':
+                    logger.info("🎤 🧹 收到ASR缓冲区清空请求，正在清理...")
+                    if self.asr:
+                        try:
+                            # 多次清空确保彻底
+                            for i in range(5):
+                                result = self.asr.recognize_final()
+                                if result:
+                                    logger.info(f"🎤 🗑️ 清理出残留音频: '{result}'")
+                            logger.info("🎤 ✅ ASR缓冲区清空完成")
+                        except Exception as e:
+                            logger.warning(f"⚠️ ASR缓冲区清空出错: {e}")
+                
                 # === 只在LISTENING状态下工作 ===
                 if current_state == SystemState.LISTENING:
                     
                     # 确保音频流已打开
                     if not self.stream:
                         try:
-                            logger.info("🎤 进入LISTENING状态，启动ASR音频流...")
+                            logger.info("🎤 🔄 检测到LISTENING状态，启动ASR音频流...")
                             self.stream = self.pa.open(format=pyaudio.paInt16,
                                                       channels=1, rate=sr, input=True,
                                                       frames_per_buffer=chunk_samples)
                             
-                            # 重置ASR状态变量
+                            # 🔥 重要：清空ASR缓冲区，防止录入之前的音频（如TTS播放的"请说"）
                             self.asr.recognize_final()  # 清空ASR缓冲区
+                            
+                            # 🎯 额外清理：多次调用确保彻底清空
+                            for _ in range(3):
+                                try:
+                                    self.asr.recognize_final()
+                                except:
+                                    pass
+                            
+                            # 重置ASR状态变量
                             trailing_sil_ms = 0
                             speech_detected = False
                             speech_confidence = 0
                             
-                            logger.info("🎤 ASR音频流已启动，等待语音输入...")
+                            logger.info("🎤 ✅ ASR音频流已启动！ASR缓冲区已清空，请开始说话...")
+                            logger.info(f"🎛️ ASR参数: 幅度阈值={self.asr_config['amplitude_threshold']}, "
+                                       f"置信度要求={self.asr_config['confidence_required']}, "
+                                       f"静音检测={ASR_CONFIG['endpoint_silence_ms']}ms")
+                            
+                            # 🔧 延迟一小段时间，确保系统稳定
+                            time.sleep(0.2)
                             
                         except Exception as e:
                             logger.error(f"❌ 打开麦克风失败: {e}", exc_info=True)
@@ -846,8 +885,13 @@ class AudioSystem:
                         silence_threshold = self.asr_config['silence_threshold']
                         is_silence = max_val < silence_threshold
 
-                        # 将音频追加到ASR
-                        self.asr.append_audio(mono)
+                        # 🔥 关键修复：只有在LISTENING状态下才将音频追加到ASR
+                        # 避免在状态转换期间录入TTS播放的"请说"
+                        if self.router.state == SystemState.LISTENING:
+                            self.asr.append_audio(mono)
+                        else:
+                            # 如果状态已经改变，跳过这次音频处理
+                            continue
                         
                         # 基于连续性的语音检测
                         confidence_required = self.asr_config['confidence_required']
@@ -880,10 +924,15 @@ class AudioSystem:
                         
                         # 语音端点触发ASR识别
                         if speech_detected and trailing_sil_ms >= ASR_CONFIG["endpoint_silence_ms"]:
-                            logger.info("🎤 语音端点检测 -> 执行ASR识别")
+                            logger.info("🎤 🔚 语音端点检测完成 -> 执行ASR识别")
                             final_text = self.asr.recognize_final()
                             
-                            logger.info(f"🎤 ASR结果: '{final_text}' (长度: {len(final_text) if final_text else 0})")
+                            logger.info(f"🎤 📝 ASR识别结果: '{final_text}' (长度: {len(final_text) if final_text else 0})")
+                            
+                            if final_text and len(final_text.strip()) > 0:
+                                logger.info("🎤 ✅ 有效语音识别，发送到LLM处理...")
+                            else:
+                                logger.warning("🎤 ⚠️ 语音识别结果为空或无效")
                             
                             self.message_bus.send('audio_to_router', {
                                 'type': 'user_command',
@@ -893,6 +942,7 @@ class AudioSystem:
                             # 重置状态
                             trailing_sil_ms = 0
                             speech_detected = False
+                            logger.info("🎤 🔄 ASR状态已重置，等待下次语音...")
                         
                     except Exception as e:
                         logger.warning(f"⚠️ ASR音频处理出错: {e}")
@@ -902,7 +952,7 @@ class AudioSystem:
                 # === 其他状态：关闭音频流 ===
                 else:  
                     if self.stream:
-                        logger.info(f"🎤 退出LISTENING状态，关闭ASR音频流")
+                        logger.info(f"🎤 ⏸️ 退出LISTENING状态(当前: {current_state})，关闭ASR音频流")
                         self.stop_stream()
                     time.sleep(0.2)  # 低功耗轮询
 
